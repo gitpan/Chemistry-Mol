@@ -1,4 +1,5 @@
 package Chemistry::Atom;
+$VERSION = '0.10';
 
 =head1 NAME
 
@@ -14,9 +15,7 @@ Chemistry::Atom
 	symbol => 'Br'
     );
 
-    $atom->add_bond($b);
-
-    print $atom;
+    print $atom->print;
 
 =head1 DESCRIPTION
 
@@ -35,14 +34,13 @@ In general, to get the value of a property use $mol->method without
 any parameters. To set the value, use $mol->method($new_value).
 
 =cut
+# Considering to add the following attributes:
+# mass_number (A)
+# formal_charge
 
-
+use 5.006001;
 use strict;
 use Math::VectorReal;
-use overload 
-             '<=>'  => \&spaceship,
-#	     '-' => \&minus,
-;
 use Carp;
 use base qw(Chemistry::Obj);
 
@@ -57,6 +55,12 @@ my $N = 0; # Number of atoms created so far, used to generate default IDs.
     Na  Mg                                          Al  Si  P   S   Cl  Ar
     K   Ca  Sc  Ti  V   Cr  Mn  Fe  Co  Ni  Cu  Zn  Ga  Ge  As  Se  Br  Kr
     Rb  Sr  Y   Zr  Nb  Mo  Tc  Ru  Rh  Pd  Ag  Cd  In  Sn  Sb  Te  I   Xe
+    Cs  Ba
+        La  Ce  Pr  Nd  Pm  Sm  Eu  Gd  Tb  Dy  Ho  Er  Tm  Yb
+            Lu  Hf  Ta  W   Re  Os  Ir  Pt  Au  Hg  Tl  Pb  Bi  Po  At  Rn
+    Fr  Ra
+        Ac  Th  Pa  U   Np  Pu  Am  Cm  Bk  Cf  Es  Fm  Md  No
+            Lr  Rf  Db  Sg  Bh  Hs  Mt  Ds  Uuu Uub Uut Uuq Uup Uuh Uus Uuo
 );
 
 for (my $i = 1; $i < @ELEMENTS; ++$i){
@@ -95,11 +99,15 @@ sub nextID {
     "a".++$N; 
 }
 
+sub reset_id {
+    $N = 0; 
+}
+
 
 =item $atom->Z($new_Z)
 
-Sets and returns Z. If the symbol of the atom doesn't correspond to
-a known element, Z = undef.
+Sets and returns the atomic number (Z). If the symbol of the atom doesn't
+correspond to a known element, Z = undef.
 
 =cut
 
@@ -136,6 +144,8 @@ sub symbol {
 =item $atom->coords([$x, $y, $z])
 
 Sets the atom's coordinates, and returns a Math::VectorReal object.
+It can take as a parameter a Math::VectorReal object, a reference to an 
+array, or the list of coordinates.
 
 =cut
 
@@ -143,7 +153,13 @@ sub coords {
     my $self = shift;
 
     if(@_) {
-        return $self->{coords} = vector(@{$_[0]});
+        if (UNIVERSAL::isa($_[0], "Math::VectorReal")) {
+            return $self->{coords} = $_[0];
+        } elsif (ref $_[0] eq "ARRAY") {
+            return $self->{coords} = vector(@{$_[0]});
+        } else {
+            return $self->{coords} = vector(@_);
+        }
     } else {
         return $self->{coords};
     }
@@ -160,7 +176,7 @@ sub add_bond {
     my $b = shift;
 
     for my $a (@{$b->{atoms}}){ #for each atom...
-        push @{$self->{bonds}}, {to=>$a, bond=>$b} if $a != $self;
+        push @{$self->{bonds}}, {to=>$a, bond=>$b} if $a ne $self;
     }
 }
 
@@ -177,7 +193,7 @@ sub neighbors {
     my @ret = ();
 
     for my $b (@{$self->{bonds}}) {
-	push @ret, $b->{to} unless $from && $b->{to} == $from;
+	push @ret, $b->{to} unless $from && $b->{to} eq $from;
     }
     @ret;
 }
@@ -195,12 +211,45 @@ sub bonds {
     my @ret = ();
 
     for my $b (@{$self->{bonds}}) {
-	push @ret, $b->{bond} unless $from && $b->{to} == $from;
+	push @ret, $b->{bond} unless $from && $b->{to} ne $from;
     }
     @ret;
 }
 
-=item $mol->print
+=item $atom->distance($obj)
+
+Returns the minimum distance to $obj, which can be an atom, a molecule, or a
+vector.
+
+=cut
+
+# I'm considering making it return ($length, $closest_obj) if wantarray().
+sub distance {
+    my $self = shift;
+    my $obj = shift;
+    my $min_length;
+
+    if ($obj->isa('Chemistry::Atom')) {
+        my $v = $self->coords - $obj->coords;
+        $min_length = $v->length;
+    } elsif ($obj->isa('Math::VectorReal')) {
+        my $v = $self->coords - $obj;
+        $min_length = $v->length;
+    } elsif ($obj->isa('Chemistry::Mol')) {
+        my @atoms = $obj->atoms;
+        my $a = shift @atoms or return undef; # ensure there's at least 1 atom
+        $min_length = $self->distance($a);
+        for $a (@atoms) {
+            my $l = $self->distance($a);
+            $min_length = $l if $l < $min_length;
+        }
+    } else {
+        croak "atom->distance() undefined for objects of type '", ref $obj,"'";
+    }
+    $min_length;
+}
+
+=item $atom->print
 
 Convert the atom to a string representation.
 
@@ -227,21 +276,10 @@ $self->{id}:
     neighbors: "$neighbors"
 EOF
     $ret .= "    attr:\n";
-    $ret .= $self->print_attr($indent);
+    $ret .= $self->print_attr($indent+2);
     $ret =~ s/^/"    "x$indent/gem;
     $ret;
 }
-
-sub spaceship {
-#    my $self = shift;
-    my ($a, $b) = @_;
-
-#    print "ref a (id = $a->{id}) = ", ref($a), "\n";
-#    print "ref b (id = $b->{id}) = ", ref($b), "\n";
-
-    return $a->{id} cmp $b->{id};
-}
-
 
 1;
 
@@ -249,7 +287,8 @@ sub spaceship {
 
 =head1 SEE ALSO
 
-L<Chemistry::Mol>, L<Chemistry::Bond>, L<Math::VectorReal>
+L<Chemistry::Mol>, L<Chemistry::Bond>, 
+L<Math::VectorReal>, L<Chemistry::Tutorial>
 
 =head1 AUTHOR
 

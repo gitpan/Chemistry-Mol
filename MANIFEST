@@ -1,9 +1,12 @@
 Atom.pm
 Bond.pm
 Changes
+File.pm
 MANIFEST
 Makefile.PL
 Mol.pm
 Obj.pm
 README
-t/1.t
+Tutorial.pod
+t/Mol.t
+t/pod.t

@@ -1,6 +1,9 @@
 package Chemistry::Obj;
+$VERSION = "0.10";
+use 5.6.1;
 
 use strict;
+
 =head1 NAME
 
 Chemistry::Obj - Abstract chemistry object
@@ -56,9 +59,21 @@ sub attr {
 
 =back
 
+=head1 OTHER METHODS
+
+=over
+
+=item $obj->del_attr($attr_name)
+
+Delete an attribute.
+
 =cut
 
-use overload '""' => "stringify";
+sub del_attr {
+    my $self = shift;
+    my $attr = shift;
+    delete $self->{attr}{$attr};
+}
 
 # A generic class attribute set/get method generator
 sub accessor {
@@ -87,11 +102,60 @@ sub print_attr {
     $ret;
 }
 
+=back
+
+=head1 OPERATOR OVERLOADING
+
+Chemistry::Obj overloads a couple of operators for convenience.
+
+=over
+
+=cut
+
+use overload 
+    '""' => "stringify",
+    'cmp' => "obj_cmp",
+    '0+', => "as_number",
+    fallback => 1,
+    ;
+
+=item ""
+
+The stringification operator. Stringify an object as its id. For example,
+If an object $obj has the id 'a1', print "$obj" will print 'a1' instead of
+something like 'Chemistry::Obj=HASH(0x810bbdc)'. If you really want to get 
+the latter, you can call overload::StrVal($obj).
+
+=cut
 
 sub stringify {
     my $self = shift;
     $self->id;
 }
+
+sub as_number {
+    $_[0];
+}
+
+=item cmp
+
+Compare objects by ID. This automatically overloads eq, ne, lt, le, gt, and ge
+as well. For example, $obj1 eq $obj2 returns true if both objects have the same
+id, even if they are different objects with different memory addresses. In
+contrast, $obj1 == $obj2 will return true only if $obj1 and $obj2 point to the
+same object, with the same memory address.
+
+=cut
+
+sub obj_cmp {
+    my ($a, $b) = @_;
+    return $a->{id} cmp $b->{id};
+}
+
+=back
+
+=cut
+
 accessor(qw(id name type));
 
 1;
