@@ -1,6 +1,6 @@
 package Chemistry::Bond;
-$VERSION = '0.20';
-# $Id: Bond.pm,v 1.14 2004/04/15 17:37:18 ivan Exp $
+$VERSION = '0.21';
+# $Id: Bond.pm,v 1.16 2004/05/13 14:59:09 itubert Exp $
 
 =head1 NAME
 
@@ -32,7 +32,7 @@ integer 1, 2, 3, or 4.
 
 =cut
 
-use 5.006001;
+use 5.006;
 use strict;
 use Scalar::Util 'weaken';
 use base qw(Chemistry::Obj);
@@ -192,7 +192,7 @@ sub parent {
 
 =head1 VERSION
 
-0.20
+0.21
 
 =head1 SEE ALSO
 

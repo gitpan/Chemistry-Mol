@@ -1,6 +1,6 @@
 package Chemistry::Atom;
-$VERSION = '0.20';
-# $Id: Atom.pm,v 1.20 2004/04/15 17:37:18 ivan Exp $
+$VERSION = '0.21';
+# $Id: Atom.pm,v 1.22 2004/05/13 14:59:09 itubert Exp $
 
 =head1 NAME
 
@@ -39,7 +39,7 @@ any parameters. To set the value, use $atom->method($new_value).
 # mass_number (A)
 # formal_charge
 
-use 5.006001;
+use 5.006;
 use strict;
 use Scalar::Util 'weaken';
 use Math::VectorReal qw(O vector);
@@ -462,7 +462,7 @@ EOF
 
 =head1 VERSION
 
-0.20
+0.21
 
 =head1 SEE ALSO
 
