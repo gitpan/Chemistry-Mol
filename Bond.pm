@@ -1,6 +1,6 @@
 package Chemistry::Bond;
-$VERSION = '0.30';
-# $Id: Bond.pm,v 1.26 2004/11/10 00:00:44 itubert Exp $
+$VERSION = '0.31';
+# $Id: Bond.pm,v 1.27 2004/11/10 16:07:57 itubert Exp $
 
 =head1 NAME
 
@@ -219,7 +219,7 @@ sub parent {
 
 =head1 VERSION
 
-0.30
+0.31
 
 =head1 SEE ALSO
 
