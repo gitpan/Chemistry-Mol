@@ -1,6 +1,6 @@
 package Chemistry::Obj;
-$VERSION = "0.24";
-# $Id: Obj.pm,v 1.17 2004/06/16 19:34:29 itubert Exp $
+$VERSION = "0.25";
+# $Id: Obj.pm,v 1.18 2004/06/30 21:58:53 itubert Exp $
 use 5.006;
 
 use strict;
@@ -173,7 +173,7 @@ sub use {
 
 =head1 VERSION
 
-0.24
+0.25
 
 =head1 SEE ALSO
 
