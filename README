@@ -1,0 +1,33 @@
+Chemistry/Mol version 0.05
+==========================
+
+This toolkit includes basic objects and methods to describe molecules. It
+consists of several modules, including Chemistry::Mol, Chemistry::Atom, 
+and Chemistry::Bond.
+
+The core methods try not to commit to a particular convention, therefore fields
+such as the bond type have no intrinsic meaning. Bonds are defined as a list of
+atoms (typically two) with an arbitrary type. Atoms are defined by a symbol and
+a Z, and may have 3D coordinates (2D and internal coming soon).
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+
+This module requires these other modules and libraries:
+    - Math::VectorReal
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2003 Ivan Tubert
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+
