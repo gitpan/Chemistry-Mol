@@ -1,6 +1,6 @@
 package Chemistry::Obj;
-$VERSION = "0.25";
-# $Id: Obj.pm,v 1.18 2004/06/30 21:58:53 itubert Exp $
+$VERSION = "0.26";
+# $Id: Obj.pm,v 1.19 2004/08/06 23:43:38 itubert Exp $
 use 5.006;
 
 use strict;
@@ -173,7 +173,7 @@ sub use {
 
 =head1 VERSION
 
-0.25
+0.26
 
 =head1 SEE ALSO
 
@@ -183,11 +183,11 @@ The PerlMol website L<http://www.perlmol.org/>
 
 =head1 AUTHOR
 
-Ivan Tubert E<lt>itub@cpan.orgE<gt>
+Ivan Tubert-Brohman E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 Ivan Tubert. All rights reserved. This program is free
+Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is free
 software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 
