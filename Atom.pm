@@ -1,7 +1,7 @@
 package Chemistry::Atom;
 
-$VERSION = '0.32';
-# $Id: Atom.pm,v 1.37 2005/02/24 20:59:33 itubert Exp $
+$VERSION = '0.33';
+# $Id: Atom.pm,v 1.38 2005/03/29 17:14:16 itubert Exp $
 
 =head1 NAME
 
@@ -369,7 +369,7 @@ it does B<not> generate coordinates for the new atoms.
 
 sub sprout_hydrogens {
     my ($self) = @_;
-    for (1 .. $self->implicit_hydrogens) {
+    for (1 .. $self->implicit_hydrogens || 0) {
         $self->parent->new_bond(
             atoms => [$self, $self->parent->new_atom(symbol => 'H')]);
     }
@@ -385,6 +385,7 @@ atom.
 
 sub collapse_hydrogens {
     my ($self) = @_;
+    no warnings 'uninitialized';
     my $implicit = $self->implicit_hydrogens;
     for my $nei ($self->neighbors) {
         $nei->delete, $implicit++ if $nei->symbol eq 'H';
@@ -758,7 +759,7 @@ sub printf {
 
 =head1 VERSION
 
-0.32
+0.33
 
 =head1 SEE ALSO
 
