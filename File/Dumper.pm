@@ -1,5 +1,5 @@
 package Chemistry::File::Dumper;
-$VERSION = '0.26';
+$VERSION = '0.30';
 
 require 5.006;
 use strict;
@@ -11,7 +11,7 @@ use Carp;
 
 =head1 NAME
 
-Chemistry::File::Dumper - Read and write molecule via Data::Dumper
+Chemistry::File::Dumper - Read and write molecules via Data::Dumper
 
 =head1 SYNOPSIS
 
@@ -64,20 +64,27 @@ There are no special options for reading.
 
 =cut
 
-sub write_string {
-    my ($self, $mol, %opts) = @_;
+sub write_mol {
+    my ($self, $fh, $mol, %opts) = @_;
     my $d = Data::Dumper->new([$mol],['$mol']);
-    $d  ->Sortkeys(1)
+    # sort the keys if this version of Data::Dumper supports it
+    $d->Sortkeys(1) if $d->can('Sortkeys'); 
+    print $fh $d
         ->Indent(exists $opts{dumper_indent} ? $opts{dumper_indent} : 1)
         ->Purity(exists $opts{dumper_purity} ? $opts{dumper_purity} : 1)
         ->Dump;
 }
 
-sub parse_string {
-    my ($self, $s, %opts) = @_;
+sub read_mol {
+    my ($self, $fh, %opts) = @_;
     my $mol;
+    my $s = do { local $/; <$fh> };
+    return unless $s;
     eval $s;
-    croak "$@" if $@;
+    if ($@) {
+        croak "Dumper eval error: $@" if $opts{fatal};
+        return;
+    } 
     $mol->_weaken;
     $mol;
 }
@@ -96,7 +103,7 @@ sub string_is {
 
 =head1 VERSION
 
-0.26
+0.30
 
 =head1 SEE ALSO
 

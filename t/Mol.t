@@ -1,8 +1,7 @@
 #use Test::More "no_plan";
-use Test::More tests => 22;
+use Test::More tests => 20;
 BEGIN { 
     use_ok('Chemistry::Mol');
-    use_ok('Math::VectorReal');    
 };
 
 # Constructors
@@ -29,21 +28,26 @@ ok($mol->bonds(1) eq $bond, '$mol->bonds(1) eq $bond');
 my $atom3;
 ok($atom3 = $mol->new_atom(symbol => "N"), '$mol->new_atom');
 
-# Atom methods
-is($atom->distance($atom2), 5, '$atom->distance');
-is($atom->symbol, "C", '$atom->symbol');
-$atom->attr("color", "brown");
-is($atom->attr("color"), "brown", '$atom->attr');
-my $v = vector(3,0,4);
-$atom3->coords($v);
-my $v2 = $atom3->coords;
-is($v->length, 5, 'atom->coords(vector)');
-$atom3->coords([3,0,4]);
-$v2 = $atom3->coords;
-is($v->length, 5, 'atom->coords(array)');
-$atom3->coords(3,0,4);
-$v2 = $atom3->coords;
-is($v->length, 5, 'atom->coords(list)');
+
+# mass
+$mol = Chemistry::Mol->new;
+$mol->new_atom(symbol => 'O');
+$mol->new_atom(symbol => 'H');
+$mol->new_atom(symbol => 'H');
+ok(abs($mol->mass - 18.01528) < 0.0001, '$mol->mass');
+$mol->atoms(1)->mass(18); 
+ok(abs($mol->mass - 20.015) < 0.01, '$mol->mass');
+
+# sprout_hydrogens
+$mol = Chemistry::Mol->new;
+$mol->new_atom(symbol => 'O', implicit_hydrogens => 2);
+is( 0+$mol->atoms,      1,      'before sprout_hydrogens' );
+$mol->sprout_hydrogens;
+is( 0+$mol->atoms,      3,      'after sprout_hydrogens' );
+$mol->collapse_hydrogens;
+is( 0+$mol->atoms,      1,      'before sprout_hydrogens' );
+
 
 # Bond methods
 is($bond->length, 5, '$bond->length');
+

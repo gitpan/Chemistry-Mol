@@ -1,6 +1,6 @@
 package Chemistry::Bond;
-$VERSION = '0.26';
-# $Id: Bond.pm,v 1.21 2004/08/06 23:43:38 itubert Exp $
+$VERSION = '0.30';
+# $Id: Bond.pm,v 1.26 2004/11/10 00:00:44 itubert Exp $
 
 =head1 NAME
 
@@ -10,13 +10,22 @@ Chemistry::Bond - Chemical bonds as objects in molecules
 
     use Chemistry::Bond;
 
-    my $bond = new Chemistry::Bond(
-	id => "b1", 
-	type => '=', 
-	atoms => [$a1, $a2]
+    # assuming we have molecule $mol with atoms $a1 and $a2
+    $bond = Chemistry::Bond->new(
+        id => "b1", 
+        type => '=', 
+        atoms => [$a1, $a2]
         order => '2',
     );
-    print $bond->print;
+    $mol->add_bond($bond);
+
+    # simpler way of doing the same:
+    $mol->new_bond(
+        id => "b1", 
+        type => '=', 
+        atoms => [$a1, $a2]
+        order => '2',
+    );
 
 =head1 DESCRIPTION
 
@@ -81,7 +90,7 @@ Sets or gets the bond order.
 
 Chemistry::Obj::accessor('order');
 
-=item $bond->length()
+=item $bond->length
 
 Returns the length of the bond, i.e., the distance between the two atom
 objects in the bond. Returns zero if the bond does not have exactly two atoms.
@@ -92,10 +101,10 @@ sub length {
     my $self = shift;
 
     if (@{$self->{atoms}} == 2) {
-	my $v = $self->{atoms}[1]{coords} - $self->{atoms}[0]{coords};
-	return $v->length;
+        my $v = $self->{atoms}[1]{coords} - $self->{atoms}[0]{coords};
+        return $v->length;
     } else {
-	return 0;
+        return 0;
     }
 }
 
@@ -142,10 +151,11 @@ EOF
 
 =item $bond->atoms()
 
-If called with no parameters, return a list of atoms in the bond.
-If called with a list (or a reference to an array) of atom objects,
-define the atoms in the bond and call $atom->add_bond for each atom
-in the list.
+If called with no parameters, return a list of atoms in the bond.  If called
+with a list (or a reference to an array) of atom objects, define the atoms in
+the bond and call $atom->add_bond for each atom in the list. Note: changing the
+atoms in a bond may have strange side effects; it is safer to treat bonds as
+immutable except with respect to properties such as name and type.
 
 =cut
 
@@ -187,7 +197,7 @@ should belong to only one molecule or strange things may happen.
 
 sub delete {
     my ($self) = @_;
-    $self->{parent}->delete_bond($self);
+    $self->{parent}->_delete_bond($self);
 }
 
 sub parent {
@@ -209,7 +219,7 @@ sub parent {
 
 =head1 VERSION
 
-0.26
+0.30
 
 =head1 SEE ALSO
 
@@ -223,8 +233,8 @@ Ivan Tubert-Brohman E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is free
-software; you can redistribute it and/or modify it under the same terms as
+Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is
+free software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 
 =cut

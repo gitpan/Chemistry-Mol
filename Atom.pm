@@ -1,7 +1,7 @@
 package Chemistry::Atom;
 
-$VERSION = '0.26';
-# $Id: Atom.pm,v 1.27 2004/08/06 23:43:38 itubert Exp $
+$VERSION = '0.30';
+# $Id: Atom.pm,v 1.35 2004/11/10 00:00:43 itubert Exp $
 
 =head1 NAME
 
@@ -12,9 +12,9 @@ Chemistry::Atom - Chemical atoms as objects in molecules
     use Chemistry::Atom;
 
     my $atom = new Chemistry::Atom(
-	id => 'a1',
-	coords => [$x, $y, $z],
-	symbol => 'Br'
+        id => 'a1',
+        coords => [$x, $y, $z],
+        symbol => 'Br'
     );
 
     print $atom->print;
@@ -180,7 +180,7 @@ sub symbol {
     my $self = shift;
 
     if(@_) {
-	$_[0] =~ s/ //g;
+        $_[0] =~ s/ //g;
         $self->{Z} = $ELEMENTS{$_[0]};
         $self->{symbol} = $_[0];
         return $self;
@@ -191,26 +191,52 @@ sub symbol {
 
 =item $atom->mass($new_mass)
 
-Sets and returns the atomic mass in atomic mass units. By default, relative
-atomic masses from the 1995 IUPAC recommendation are used. (Table stolen from
-the Chemistry::MolecularMass module by Maksim A. Khrapov).
+Sets and returns the atomic mass in atomic mass units. Any arbitrary mass may
+be set explicitly by using this method. However, if no mass is set explicitly
+and this method is called as an accessor, the return value is the following:
+
+1) If the mass number is undefined (see the mass_number method below), the
+relative atomic mass from the 1995 IUPAC recommendation is used. (Table stolen
+from the Chemistry::MolecularMass module by Maksim A.  Khrapov).
+
+2) If the mass number is defined and the L<Chemistry::Isotope> module is 
+available and it knows the mass for the isotope, the exact mass of the isotope
+is used; otherwise, the mass number is returned.
 
 =cut
 
 sub mass {
-    my ($self, $mass) = @_;
-    if(defined $mass) {
-        $self->{mass} = $mass;
+    my $self = shift;
+    if (@_) {
+        $self->{mass} = shift;
         return $self;
     } else {
-        if (exists $self->{mass}) {
-            $mass = $self->{mass};
+        if (defined $self->{mass}) {
+            return $self->{mass};
+        } elsif (defined $self->{mass_number}) {
+            if (eval { require Chemistry::Isotope } and 
+                my $m = Chemistry::Isotope::isotope_mass(
+                    $self->{mass_number}, $self->{Z})
+            ) {
+                return $m;
+            } else {
+                return $self->{mass_number};
+            }
         } else {
-            $mass = $Atomic_masses{$self->symbol};
+            return $Atomic_masses{$self->symbol};
         }
     }
-    $mass;
 }
+
+=item $atom->mass_number($new_mass_number)
+
+Sets or gets the mass number. The mass number is undefined unless is 
+set explicitly (this module does not try to guess a default mass number based
+on the natural occuring isotope distribution).
+
+=cut
+
+Chemistry::Obj::accessor('mass_number');
 
 =item $atom->coords
 
@@ -244,16 +270,16 @@ sub coords {
 =item $atom->internal_coords
 
     # get a Chemistry::InternalCoords object
-    my $ic = $atom->coords;      
+    my $ic = $atom->internal_coords;      
 
     # set a Chemistry::InternalCoords object 
-    $atom->coords($vic);         
+    $atom->internal_coords($vic);         
 
     # also accepts array refs 
-    $atom->coords([8, 1.54, 7, 109.47, 6, 120.0]);   
+    $atom->internal_coords([8, 1.54, 7, 109.47, 6, 120.0]);   
 
     # also accepts lists
-    $atom->coords(8, 1.54, 7, 109.47, 6, 120.0);    
+    $atom->internal_coords(8, 1.54, 7, 109.47, 6, 120.0);    
 
 Sets or gets the atom's internal coordinates. It can take as a parameter a
 Chemistry::InternalCoords object, a reference to an array, or the list of
@@ -287,7 +313,7 @@ sub internal_coords {
 =item $atom->x3, $atom->y3, $atom->z3
 
 Get the x, y or z 3D coordinate of the atom. This methods are just accessors
-that don't change the coordinats. $atom->x3 is short for 
+that don't change the coordinates. $atom->x3 is short for 
 ($atom->coords->array)[0], and so on.
 
 =cut
@@ -302,15 +328,7 @@ Set or get the formal charge of the atom.
 
 =cut
 
-sub formal_charge {
-    my $self = shift;
-    if (@_) {
-        ($self->{formal_charge}) = @_;
-        return $self;
-    } else {
-        return $self->{formal_charge};
-    }
-}
+Chemistry::Obj::accessor('formal_charge');
 
 =item $atom->implicit_hydrogens($h_count)
 
@@ -318,10 +336,7 @@ Set or get the number of implicit hydrogen atoms bonded to the atom.
 
 =cut
 
-sub implicit_hydrogens {
-    my ($self) = shift;
-    $self->hydrogens(@_);
-}
+sub implicit_hydrogens { shift->hydrogens(@_) }
 
 =item $atom->hydrogens($h_count)
 
@@ -330,19 +345,12 @@ Set or get the number of implicit hydrogen atoms bonded to the atom
 
 =cut
 
-sub hydrogens {
-    my $self = shift;
-    if (@_) {
-        ($self->{hydrogens}) = @_;
-        return $self;
-    } else {
-        return $self->{hydrogens};
-    }
-}
+Chemistry::Obj::accessor('hydrogens');
 
 =item $atom->total_hydrogens($h_count)
 
-Set or get the total number of hydrogen atoms bonded to the atom.
+Get the total number of hydrogen atoms bonded to the atom (implicit +
+explicit).
 
 =cut
 
@@ -350,6 +358,38 @@ sub total_hydrogens {
     my ($self) = @_;
     no warnings 'uninitialized';
     $self->hydrogens + grep { $_->symbol eq 'H' } $self->neighbors;
+}
+
+=item $atom->sprout_hydrogens
+
+Convert all the implicit hydrogens for this atom to explicit hydrogens. Note:
+it does B<not> generate coordinates for the new atoms.
+
+=cut
+
+sub sprout_hydrogens {
+    my ($self) = @_;
+    for (1 .. $self->implicit_hydrogens) {
+        $self->parent->new_bond(
+            atoms => [$self, $self->parent->new_atom(symbol => 'H')]);
+    }
+    $self->implicit_hydrogens(0);
+}
+
+=item $atom->collapse_hydrogens
+
+Delete neighboring hydrogen atoms and add them as implicit hydrogens for this
+atom.
+
+=cut
+
+sub collapse_hydrogens {
+    my ($self) = @_;
+    my $implicit = $self->implicit_hydrogens;
+    for my $nei ($self->neighbors) {
+        $nei->delete, $implicit++ if $nei->symbol eq 'H';
+    }
+    $self->implicit_hydrogens($implicit);
 }
 
 =item $atom->aromatic($bool)
@@ -360,15 +400,7 @@ detection"! (For that, look at the L<Chemistry::Ring> module).
 
 =cut
 
-sub aromatic {
-    my $self = shift;
-    if (@_) {
-        ($self->{aromatic}) = @_;
-        return $self;
-    } else {
-        return $self->{aromatic};
-    }
-}
+Chemistry::Obj::accessor('aromatic');
 
 =item $atom->valence
 
@@ -385,9 +417,10 @@ sub valence {
     $valence;
 }
 
-=item $atom->valence
+=item $atom->explicit_valence
 
-Like c<valence>, but excluding implicit hydrogen atoms.
+Like C<valence>, but excluding implicit hydrogen atoms. To get the raw number
+of bonds, without counting bond orders, call $atom->bonds in scalar context.
 
 =cut
 
@@ -398,12 +431,7 @@ sub explicit_valence {
     $valence;
 }
 
-=item $atom->add_bond($bond)
-
-Adds a new bond to the atom, as defined by the Chemistry::Bond object $bond.
-
-=cut
-
+# this method is for internal use only; called by $bond->atoms
 sub add_bond {
     my $self = shift;
     my $bond = shift;
@@ -438,15 +466,21 @@ sub delete_bond {
 
 =item $atom->delete
 
-Calls $mol->delete_atom($atom) on the atom's parent molecule. Note that an atom
-should belong to only one molecule or strange things will happen.
+Calls $mol->delete_atom($atom) on the atom's parent molecule.
 
 =cut
 
 sub delete {
     my ($self) = @_;
-    $self->{parent}->delete_atom($self);
+    $self->{parent}->_delete_atom($self);
 }
+
+=item $atom->parent
+
+Returns the atom's containing object (the molecule to which the atom belongs).
+An atom can only have one parent.
+
+=cut
 
 sub parent {
     my $self = shift;
@@ -473,7 +507,7 @@ sub neighbors {
     my @ret = ();
 
     for my $b (@{$self->{bonds}}) {
-	push @ret, $b->{to} unless $from && $b->{to} eq $from;
+        push @ret, $b->{to} unless $from && $b->{to} eq $from;
     }
     @ret;
 }
@@ -491,7 +525,7 @@ sub bonds {
     my @ret = ();
 
     for my $b (@{$self->{bonds}}) {
-	push @ret, $b->{bond} unless $from && $b->{to} eq $from;
+        push @ret, $b->{bond} unless $from && $b->{to} eq $from;
     }
     @ret;
 }
@@ -515,7 +549,7 @@ sub bonds_neighbors {
     my @ret = ();
 
     for my $b (@{$self->{bonds}}) {
-	push @ret, {%$b} unless $from && $b->{to} eq $from;
+        push @ret, {%$b} unless $from && $b->{to} eq $from;
     }
     @ret;
 }
@@ -569,6 +603,7 @@ sub angle {
     @_ == 3 or croak "Chemistry::Atom::angle requires three atoms!\n";
     my @c;
     for my $a (@_) { # extract coordinates
+        ref $a or croak "Chemistry::Atom::angle: $a is not an object";
         push @c, $a->isa("Chemistry::Atom") ? $a->coords :
             $a->isa("Math::VectorReal") ? $a : 
                 croak "angle: $a is neither an atom nor a vector!\n";
@@ -585,7 +620,7 @@ Same as angle(), but returns the value in degrees. May be exported.
 =cut
 
 sub angle_deg {
-    rad2deg(angle(@_));
+    rad2deg(shift->angle(@_));
 }
 
 =item $atom->dihedral($atom2, $atom3, $atom4)
@@ -620,7 +655,7 @@ Same as dihedral(), but returns the value in degrees. May be exported.
 =cut
 
 sub dihedral_deg {
-    rad2deg(dihedral(@_));
+    rad2deg(shift->dihedral(@_));
 }
 
 =item $atom->print
@@ -705,7 +740,7 @@ sub sprintf {
 =item $atom->printf($format)
 
 Same as $atom->sprintf, but prints to standard output automatically. Used
-for quick and dirty molecular information dumping.
+for quick and dirty atomic information dumping.
 
 =cut
 
@@ -720,12 +755,13 @@ sub printf {
 
 =head1 VERSION
 
-0.26
+0.30
 
 =head1 SEE ALSO
 
 L<Chemistry::Mol>, L<Chemistry::Bond>, 
-L<Math::VectorReal>, L<Chemistry::Tutorial>
+L<Math::VectorReal>, L<Chemistry::Tutorial>,
+L<Chemistry::InternalCoords>
 
 The PerlMol website L<http://www.perlmol.org/>
 
@@ -735,8 +771,8 @@ Ivan Tubert-Brohman E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is free
-software; you can redistribute it and/or modify it under the same terms as
+Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is
+free software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 
 =cut

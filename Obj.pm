@@ -1,6 +1,6 @@
 package Chemistry::Obj;
-$VERSION = "0.26";
-# $Id: Obj.pm,v 1.19 2004/08/06 23:43:38 itubert Exp $
+$VERSION = "0.30";
+# $Id: Obj.pm,v 1.24 2004/11/09 23:59:32 itubert Exp $
 use 5.006;
 
 use strict;
@@ -12,8 +12,16 @@ Chemistry::Obj - Abstract chemistry object
 
 =head1 SYNOPSIS
 
+    package MyObj;
     use base "Chemistry::Obj";
-    Chemistry::Obj::accessor('myattr1', 'myattr2');
+    Chemistry::Obj::accessor('color', 'flavor');
+
+    package main;
+    my $obj = MyObj->new(name => 'bob', color => red);
+    $obj->attr(size => 42);
+    $obj->color('blue');
+    my $color = $obj->color;
+    my $size = $obj->attr('size');
 
 =head1 DESCRIPTION
 
@@ -47,15 +55,31 @@ used for bond orders and atom types.
 
 A space where the user can store any kind of information about the object.  The
 accessor method for attr expects the attribute name as the first parameter, and
-(optionally) the new value as the second parameter.
+(optionally) the new value as the second parameter. It can also take a hash or
+hashref with several attributes. Examples:
+
+    $color = $obj->attr('color');
+    $obj->attr(color => 'red');
+    $obj->attr(color => 'red', flavor => 'cherry');
+    $obj->attr({color => 'red', flavor => 'cherry'});
 
 =cut
 
 sub attr {
     my $self = shift;
-    my $attr = shift;
-    return $self->{attr}{$attr} unless @_;
-    $self->{attr}{$attr} = shift;
+    my ($attr) = @_;
+    if (ref $attr eq 'HASH') {
+        $self->{attr} = { %$attr };
+    } elsif (@_ == 1) {
+        return $self->{attr}{$attr};
+    } elsif (@_ == 0) {
+        return {%{$self->{attr}}};
+    } else {
+        while (@_ > 1) {
+            $attr = shift;
+            $self->{attr}{$attr} = shift;
+        }
+    }
     $self;
 }
 
@@ -104,6 +128,38 @@ sub print_attr {
     $ret;
 }
 
+my $N = 0; # atom ID counter
+sub nextID { "obj".++$N; }
+sub reset_id { $N = 0; }
+
+=item $class->new(name => value, name => value...) 
+
+Generic object constructor. It will automatically call each "name" method with
+the parameter "value". For example,
+
+    $bob = Chemistry::Obj->new(name => 'bob', attr => {size => 42});
+
+is equivalent to
+
+    $bob = Chemistry::Obj->new;
+    $bob->name('bob');
+    $bob->attr({size => 42});
+
+=cut
+
+sub new {
+    my $class = shift;
+    my %args = @_;
+    my $self = bless {
+        id => $class->nextID,
+        #$class->default_args, 
+    }, ref $class || $class;
+    $self->$_($args{$_}) for (keys %args);
+    return $self;
+}
+
+#sub default_args { (id => shift->nextID) }
+
 =back
 
 =head1 OPERATOR OVERLOADING
@@ -123,10 +179,10 @@ use overload
 
 =item ""
 
-The stringification operator. Stringify an object as its id. For example,
-If an object $obj has the id 'a1', print "$obj" will print 'a1' instead of
-something like 'Chemistry::Obj=HASH(0x810bbdc)'. If you really want to get 
-the latter, you can call overload::StrVal($obj).
+The stringification operator. Stringify an object as its id. For example, If an
+object $obj has the id 'a1', print "$obj" will print 'a1' instead of something
+like 'Chemistry::Obj=HASH(0x810bbdc)'. If you really want to get the latter,
+you can call C<overload::StrVal($obj)>. See L<overload> for details.
 
 =cut
 
@@ -160,8 +216,22 @@ sub obj_cmp {
 
 =cut
 
-accessor(qw(id name type));
+accessor(qw(name type));
 
+sub id {
+    my $self = shift;
+    return $self->{id} unless @_;
+    if ($self->{parent}) {
+        my $new_id = shift;
+        my $old_id = $self->{id};
+        $self->{id} = $new_id;
+        $self->{parent}->_change_id($old_id, $new_id);
+    } else {
+        $self->{id} = shift;
+    }
+}
+
+# this is an experimental method and shouldn't be used!
 sub use {
     my ($pack, $module, @args) = @_;
     $pack = ref $pack || $pack;
@@ -173,7 +243,7 @@ sub use {
 
 =head1 VERSION
 
-0.26
+0.30
 
 =head1 SEE ALSO
 
@@ -187,8 +257,8 @@ Ivan Tubert-Brohman E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is free
-software; you can redistribute it and/or modify it under the same terms as
+Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is
+free software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 
 =cut
