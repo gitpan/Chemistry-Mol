@@ -1,5 +1,6 @@
 package Chemistry::Bond;
-$VERSION = '0.11';
+$VERSION = '0.20';
+# $Id: Bond.pm,v 1.14 2004/04/15 17:37:18 ivan Exp $
 
 =head1 NAME
 
@@ -33,6 +34,7 @@ integer 1, 2, 3, or 4.
 
 use 5.006001;
 use strict;
+use Scalar::Util 'weaken';
 use base qw(Chemistry::Obj);
 
 my $N = 0;
@@ -106,6 +108,7 @@ Convert the bond to a string representation.
 sub print {
     my $self = shift;
     my ($indent) = @_;
+    $indent ||= 0;
     my $l = sprintf "%.4g", $self->length;
     my $atoms = join " ", map {$_->id} $self->atoms;
     my $ret =  <<EOF;
@@ -135,6 +138,7 @@ sub atoms {
     if (@_) {
         $self->{atoms} = ref $_[0] ? $_[0] : [@_];
         for my $a (@{$self->{atoms}}) { # add bond to each atom
+            weaken($a);
             $a->add_bond($self);
         }
     } else {
@@ -142,13 +146,59 @@ sub atoms {
     }
 }
 
+sub _weaken {
+    my $self = shift;
+    for my $a (@{$self->{atoms}}) {
+        weaken($a);
+    }
+}
+
+# This method is private and should only be called from $mol->delete_bond
+sub delete_atoms {
+    my $self = shift;
+    for my $a (@{$self->{atoms}}) { # delete bond from each atom
+        $a->delete_bond($self);
+    }
+}
+
+=item $bond->delete
+
+Calls $mol->delete_bond($bond) on the bond's parent molecule. Note that a bond
+should belong to only one molecule or strange things may happen.
+
+=cut
+
+sub delete {
+    my ($self) = @_;
+    $self->{parent}->delete_bond($self);
+}
+
+sub parent {
+    my $self = shift;
+    if (@_) {
+        ($self->{parent}) = @_;
+        weaken($self->{parent});
+        $self;
+    } else {
+        $self->{parent};
+    }
+}
+
+
+
 1;
 
 =back
 
+=head1 VERSION
+
+0.20
+
 =head1 SEE ALSO
 
 L<Chemistry::Mol>, L<Chemistry::Atom>, L<Chemistry::Tutorial>
+
+The PerlMol website L<http://www.perlmol.org/>
 
 =head1 AUTHOR
 
@@ -156,7 +206,7 @@ Ivan Tubert E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2003 Ivan Tubert. All rights reserved. This program is free
+Copyright (c) 2004 Ivan Tubert. All rights reserved. This program is free
 software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 

@@ -1,5 +1,6 @@
 package Chemistry::Atom;
-$VERSION = '0.11';
+$VERSION = '0.20';
+# $Id: Atom.pm,v 1.20 2004/04/15 17:37:18 ivan Exp $
 
 =head1 NAME
 
@@ -30,8 +31,8 @@ In addition to common attributes such as id, name, and type,
 atoms have the following attributes, which are accessed or
 modified through methods defined below: bonds, coords, Z, symbol.
 
-In general, to get the value of a property use $mol->method without
-any parameters. To set the value, use $mol->method($new_value).
+In general, to get the value of a property use $atom->method without
+any parameters. To set the value, use $atom->method($new_value).
 
 =cut
 # Considering to add the following attributes:
@@ -40,9 +41,18 @@ any parameters. To set the value, use $mol->method($new_value).
 
 use 5.006001;
 use strict;
-use Math::VectorReal;
+use Scalar::Util 'weaken';
+use Math::VectorReal qw(O vector);
+use Math::Trig;
 use Carp;
-use base qw(Chemistry::Obj);
+use base qw(Chemistry::Obj Exporter);
+
+our @EXPORT_OK = qw(distance angle dihedral angle_deg dihedral_deg);
+our @EXPORT = ();
+our %EXPORT_TAGS = (
+      all  => [@EXPORT, @EXPORT_OK],
+);
+
 
 use vars qw(@ELEMENTS %ELEMENTS);
 
@@ -226,10 +236,54 @@ Adds a new bond to the atom, as defined by the Bond object $bond.
 
 sub add_bond {
     my $self = shift;
-    my $b = shift;
+    my $bond = shift;
 
-    for my $a (@{$b->{atoms}}){ #for each atom...
-        push @{$self->{bonds}}, {to=>$a, bond=>$b} if $a ne $self;
+    for my $atom (@{$bond->{atoms}}){ #for each atom...
+        if ($atom ne $self) {
+            my $b = {to=>$atom, bond=>$bond};
+            weaken($b->{to});
+            weaken($b->{bond});
+            push @{$self->{bonds}}, $b;
+        }
+    }
+}
+
+sub _weaken {
+    my $self = shift;
+    for my $b (@{$self->{bonds}}) {
+        weaken($b->{to});
+        weaken($b->{bond});
+    }
+}
+
+# This method is private. Bonds should be deleted from the 
+# mol object. These methods should only be called by 
+# $bond->delete_atoms, which is called by $mol->delete_bond
+sub delete_bond {
+    my ($self, $bond) = @_;
+    $self->{bonds} = [ grep { $_->{bond} ne $bond } @{$self->{bonds}} ];
+}
+
+=item $atom->delete
+
+Calls $mol->delete_atom($atom) on the atom's parent molecule. Note that an atom
+should belong to only one molecule or strange things may happen.
+
+=cut
+
+sub delete {
+    my ($self) = @_;
+    $self->{parent}->delete_atom($self);
+}
+
+sub parent {
+    my $self = shift;
+    if (@_) {
+        ($self->{parent}) = @_;
+        weaken($self->{parent});
+        $self;
+    } else {
+        $self->{parent};
     }
 }
 
@@ -269,18 +323,19 @@ sub bonds {
     @ret;
 }
 
-=item $atom->distance($obj)
+=item ($distance, $closest_atom) = $atom->distance($obj)
 
 Returns the minimum distance to $obj, which can be an atom, a molecule, or a
-vector.
+vector. In scalar context it returns only the distance; in list context it
+also returns the closest atom found.
 
 =cut
 
-# I'm considering making it return ($length, $closest_obj) if wantarray().
 sub distance {
     my $self = shift;
     my $obj = shift;
     my $min_length;
+    my $closest_atom = $obj;
 
     if ($obj->isa('Chemistry::Atom')) {
         my $v = $self->coords - $obj->coords;
@@ -292,14 +347,80 @@ sub distance {
         my @atoms = $obj->atoms;
         my $a = shift @atoms or return undef; # ensure there's at least 1 atom
         $min_length = $self->distance($a);
+        $closest_atom = $a;
         for $a (@atoms) {
             my $l = $self->distance($a);
-            $min_length = $l if $l < $min_length;
+            $min_length = $l, $closest_atom = $a if $l < $min_length;
         }
     } else {
         croak "atom->distance() undefined for objects of type '", ref $obj,"'";
     }
-    $min_length;
+    wantarray ? ($min_length, $closest_atom) : $min_length;
+}
+
+=item $atom->angle($atom2, $atom3)
+
+Returns the angle in radians between the atoms involved. $atom2 is the atom in
+the middle. Can also be called as Chemistry::Atom::angle($atom1, $atom2, $atom3);
+
+=cut
+
+# $a2 is the one in the center
+sub angle {
+    @_ == 3 or croak "Chemistry::Atom::angle requires three atoms!\n";
+    my @c;
+    for my $a (@_) { # extract coordinates
+        push @c, $a->isa("Chemistry::Atom") ? $a->coords :
+            $a->isa("Math::VectorReal") ? $a : 
+                croak "angle: $a is neither an atom nor a vector!\n";
+    }
+    my $v1 = $c[0] - $c[1];
+    my $v2 = $c[2] - $c[1];
+    acos(($v1 . $v2) / ($v1->length * $v2->length));
+}
+
+=item $atom->angle_deg($atom2, $atom3)
+
+Same as angle(), but returns the value in degrees.
+
+=cut
+
+sub angle_deg {
+    rad2deg(angle(@_));
+}
+
+=item $atom->dihedral($atom2, $atom3, $atom4)
+
+Returns the dihedral angle in radians between the atoms involved.  Can also be
+called as Chemistry::Atom::dihedral($atom1, $atom2, $atom3, $atom4);
+
+=cut
+
+sub dihedral {
+    @_ == 4 or croak "Chemistry::Atom::dihedral requires four atoms!\n";
+    my @c;
+    for my $a (@_) { # extract coordinates
+        push @c, $a->isa("Chemistry::Atom") ? $a->coords :
+            $a->isa("Math::VectorReal") ? $a : 
+                croak "angle: $a is neither an atom nor a vector!\n";
+    }
+    my $v1 = $c[0] - $c[1];
+    my $v2 = $c[2] - $c[1];
+    my $v3 = $c[3] - $c[2];
+    my $x1 = $v1 x $v2;
+    my $x2 = $v3 x $v2;
+    my $abs_dih = angle($x1, O(), $x2);
+    $v1 . $x2 > 0 ? $abs_dih : -$abs_dih;
+}
+
+=item $atom->dihedral_deg($atom2, $atom3, $atom4)
+
+Same as dihedral(), but returns the value in degrees.
+
+=cut
+
+sub dihedral_deg {
+    rad2deg(dihedral(@_));
 }
 
 =item $atom->print
@@ -339,10 +460,16 @@ EOF
 
 =back
 
+=head1 VERSION
+
+0.20
+
 =head1 SEE ALSO
 
 L<Chemistry::Mol>, L<Chemistry::Bond>, 
 L<Math::VectorReal>, L<Chemistry::Tutorial>
+
+The PerlMol website L<http://www.perlmol.org/>
 
 =head1 AUTHOR
 
@@ -350,7 +477,7 @@ Ivan Tubert E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2003 Ivan Tubert. All rights reserved. This program is free
+Copyright (c) 2004 Ivan Tubert. All rights reserved. This program is free
 software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 
