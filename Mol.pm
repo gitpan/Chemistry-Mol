@@ -1,6 +1,6 @@
 package Chemistry::Mol;
-$VERSION = '0.31';
-# $Id: Mol.pm,v 1.41 2004/11/10 16:07:57 itubert Exp $
+$VERSION = '0.32';
+# $Id: Mol.pm,v 1.44 2005/02/24 20:59:34 itubert Exp $
 
 =head1 NAME
 
@@ -189,6 +189,7 @@ sub add_bond {
             #croak "Duplicate ID when adding bond '$bond' to mol '$self'";
         #}
         push @{$self->{bonds}}, $bond;
+        $_->add_bond($bond) for $bond->atoms;
         $self->{byId}{$bond->id} = $bond;
         $bond->parent($self);
     }
@@ -786,7 +787,6 @@ with duplicate IDs (for example, if they were cloned).
 =cut
 
 # joins several molecules into one
-# Does not touch the original copy.
 sub combine {
     my ($self, @others) = @_;
     my $mol;
@@ -844,9 +844,9 @@ sub separate {
 # connected fragments. Uses a depth-first search
 sub _paint {
     my ($self, $atom, $color) = @_;
-    return if $self->{_paint_tab}{$atom->id} eq $color;
+    return if defined $self->{_paint_tab}{$atom->id};
     $self->{_paint_tab}{$atom->id} = $color;
-    $self->{_paint_tab}{$_->id} = $color for ($atom->bonds);
+    $self->{_paint_tab}{$_->id}    = $color for ($atom->bonds);
     for my $neighbor ($atom->neighbors) {
         $self->_paint($neighbor, $color);
     }
@@ -885,7 +885,7 @@ sub collapse_hydrogens {
 
 =head1 VERSION
 
-0.31
+0.32
 
 =head1 SEE ALSO
 

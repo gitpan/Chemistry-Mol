@@ -1,6 +1,6 @@
 package Chemistry::Bond;
-$VERSION = '0.31';
-# $Id: Bond.pm,v 1.27 2004/11/10 16:07:57 itubert Exp $
+$VERSION = '0.32';
+# $Id: Bond.pm,v 1.29 2005/02/24 20:59:34 itubert Exp $
 
 =head1 NAME
 
@@ -163,9 +163,8 @@ sub atoms {
     my $self = shift;
     if (@_) {
         $self->{atoms} = ref $_[0] ? $_[0] : [@_];
-        for my $a (@{$self->{atoms}}) { # add bond to each atom
+        for my $a (@{$self->{atoms}}) { 
             weaken($a);
-            $a->add_bond($self);
         }
     } else {
         return (@{$self->{atoms}});
@@ -219,7 +218,7 @@ sub parent {
 
 =head1 VERSION
 
-0.31
+0.32
 
 =head1 SEE ALSO
 
