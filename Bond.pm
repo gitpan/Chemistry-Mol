@@ -1,6 +1,6 @@
 package Chemistry::Bond;
-$VERSION = '0.33';
-# $Id: Bond.pm,v 1.30 2005/03/29 17:14:17 itubert Exp $
+$VERSION = '0.34';
+# $Id: Bond.pm,v 1.32 2005/05/16 23:29:07 itubert Exp $
 
 =head1 NAME
 
@@ -165,6 +165,7 @@ sub atoms {
         $self->{atoms} = ref $_[0] ? $_[0] : [@_];
         for my $a (@{$self->{atoms}}) { 
             weaken($a);
+            $a->add_bond($self);
         }
     } else {
         return (@{$self->{atoms}});
@@ -196,7 +197,8 @@ should belong to only one molecule or strange things may happen.
 
 sub delete {
     my ($self) = @_;
-    $self->{parent}->_delete_bond($self);
+    $self->parent->_delete_bond($self);
+    $self->{deleted} = 1;
 }
 
 sub parent {
@@ -218,7 +220,7 @@ sub parent {
 
 =head1 VERSION
 
-0.33
+0.34
 
 =head1 SEE ALSO
 
@@ -232,7 +234,7 @@ Ivan Tubert-Brohman E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is
+Copyright (c) 2005 Ivan Tubert-Brohman. All rights reserved. This program is
 free software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 

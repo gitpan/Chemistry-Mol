@@ -1,7 +1,7 @@
 package Chemistry::Atom;
 
-$VERSION = '0.33';
-# $Id: Atom.pm,v 1.38 2005/03/29 17:14:16 itubert Exp $
+$VERSION = '0.34';
+# $Id: Atom.pm,v 1.40 2005/05/16 23:29:07 itubert Exp $
 
 =head1 NAME
 
@@ -53,6 +53,7 @@ use Math::VectorReal qw(O vector);
 use Math::Trig;
 use Carp;
 use base qw(Chemistry::Obj Exporter);
+use List::Util qw(first);
 
 our @EXPORT_OK = qw(distance angle dihedral angle_deg dihedral_deg);
 our %EXPORT_TAGS = (
@@ -432,10 +433,12 @@ sub explicit_valence {
     $valence;
 }
 
-# this method is for internal use only; called by $bond->atoms
+# this method is for internal use only; called by $mol->add_bond
 sub add_bond {
     my $self = shift;
     my $bond = shift;
+    my %seen;
+    #return if first { $_ eq $bond } @{$self->{bonds}}; 
 
     for my $atom (@{$bond->{atoms}}){ #for each atom...
         if ($atom ne $self) {
@@ -759,7 +762,7 @@ sub printf {
 
 =head1 VERSION
 
-0.33
+0.34
 
 =head1 SEE ALSO
 
@@ -775,7 +778,7 @@ Ivan Tubert-Brohman E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is
+Copyright (c) 2005 Ivan Tubert-Brohman. All rights reserved. This program is
 free software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 
