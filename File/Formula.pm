@@ -1,6 +1,6 @@
 package Chemistry::File::Formula;
-$VERSION = '0.34';
-# $Id: Formula.pm,v 1.12 2005/05/16 23:29:12 itubert Exp $
+$VERSION = '0.35';
+# $Id: Formula.pm,v 1.13 2005/05/20 19:01:05 itubert Exp $
 
 use strict;
 use base "Chemistry::File";
@@ -283,7 +283,7 @@ sub ParensBalanced {
 
 =head1 VERSION
 
-0.34
+0.35
 
 =head1 SEE ALSO
 
