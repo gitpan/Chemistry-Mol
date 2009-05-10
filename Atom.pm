@@ -1,7 +1,7 @@
 package Chemistry::Atom;
 
-$VERSION = '0.36';
-# $Id: Atom.pm,v 1.42 2005/09/20 14:06:50 itubert Exp $
+$VERSION = '0.37';
+# $Id: Atom.pm,v 1.44 2009/05/10 19:37:58 itubert Exp $
 
 =head1 NAME
 
@@ -181,9 +181,10 @@ sub symbol {
     my $self = shift;
 
     if(@_) {
-        $_[0] =~ s/ //g;
-        $self->{Z} = $ELEMENTS{$_[0]};
-        $self->{symbol} = $_[0];
+        my $symbol = shift;
+        $symbol =~ s/ //g;
+        $self->{Z} = $ELEMENTS{$symbol};
+        $self->{symbol} = $symbol;
         return $self;
     } else {
         return $self->{symbol};
@@ -233,7 +234,7 @@ sub mass {
 
 Sets or gets the mass number. The mass number is undefined unless is 
 set explicitly (this module does not try to guess a default mass number based
-on the natural occuring isotope distribution).
+on the natural occurring isotope distribution).
 
 =cut
 
@@ -840,7 +841,7 @@ sub printf {
 
 =head1 VERSION
 
-0.36
+0.37
 
 =head1 SEE ALSO
 

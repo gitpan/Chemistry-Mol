@@ -1,6 +1,6 @@
 package Chemistry::Bond;
-$VERSION = '0.36';
-# $Id: Bond.pm,v 1.34 2005/09/20 14:06:50 itubert Exp $
+$VERSION = '0.37';
+# $Id: Bond.pm,v 1.36 2009/05/10 19:37:58 itubert Exp $
 
 =head1 NAME
 
@@ -31,7 +31,7 @@ Chemistry::Bond - Chemical bonds as objects in molecules
 
 This module includes objects to describe chemical bonds.
 A bond is defined as a list of atoms (typically two), with some
-associated properies.
+associated properties.
 
 =head2 Bond Attributes
 
@@ -220,7 +220,7 @@ sub parent {
 
 =head1 VERSION
 
-0.36
+0.37
 
 =head1 SEE ALSO
 
